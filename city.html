@@ -108,6 +108,24 @@ body.spec #btnSuper,body.spec #mates,body.spec #carry{display:none}
 .pulse{width:44px;height:44px;border-radius:50%;border:4px solid var(--line);border-top-color:var(--volt);animation:spin 1s linear infinite}
 #loading.err .pulse{display:none}
 @keyframes spin{to{transform:rotate(360deg)}}
+
+/* v6.1 layout: plates at the two top corners, a small clock in the middle, map on the right edge, team down the left edge */
+#top{left:calc(var(--sl) + 46px)!important;right:var(--sr)!important;width:auto!important;min-width:0!important;transform:none!important;justify-content:space-between;gap:10px}
+#top .team{flex:0 1 220px;max-width:220px;padding:3px 7px 5px}
+#top .team .row{font-size:.62rem}#top .team .row b{font-size:.92rem}#top .bar{height:10px}#top small{font-size:.58rem}
+#mid{padding:2px 9px 4px}#clock{font-size:1.25rem}
+#side{right:var(--sr);top:calc(var(--st) + 70px)!important}
+#mini{opacity:.92}
+#mates{position:fixed;left:var(--sl);top:calc(var(--st) + 60px);flex-direction:column;gap:6px}
+.mate{width:34px}.mate img{width:34px;height:34px}.mate em{height:34px}
+#feed{top:auto!important;bottom:calc(var(--sb) + 150px);left:var(--sl)}
+#vig.low{opacity:1!important;animation:lowhp 1s ease-in-out infinite}
+@keyframes lowhp{50%{opacity:.35}}
+#btnSuper span small{display:block;font-size:1.1rem;color:#fff}
+#mapIntro{position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:4px;pointer-events:none;z-index:6;background:radial-gradient(ellipse at center,rgba(0,0,0,.45),transparent 70%);animation:mapIn 2.6s ease forwards}
+#mapIntro small{font-family:var(--f-display);font-size:1rem;letter-spacing:.2em;color:#fff;text-shadow:0 2px 0 #000}
+#mapIntro b{font-family:var(--f-display);font-weight:400;font-size:clamp(2rem,7vw,3.6rem);color:var(--volt);text-shadow:0 4px 0 #000;-webkit-text-stroke:2px #000;paint-order:stroke fill}
+@keyframes mapIn{0%{opacity:0;transform:scale(1.3)}12%{opacity:1;transform:scale(1)}75%{opacity:1}100%{opacity:0}}
 @media (max-width:720px){#top{width:calc(100vw - 150px);min-width:0;left:var(--sl);transform:none;margin-left:44px}.team .row span{display:none}#feed{top:calc(var(--st) + 70px)}}
 @media (max-height:430px){.hero{width:150px;padding:6px 8px 8px}.hero img{width:60px;height:60px}.hero small{display:none}.over{gap:7px}#how{font-size:.7rem}}
 @media (prefers-reduced-motion:reduce){*{animation-duration:.01s!important}}

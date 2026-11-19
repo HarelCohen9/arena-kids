@@ -23,26 +23,27 @@ async function boot() {
   try { const q = (location.hash || '').slice(1); if (THEMES[q]) THEME_ID = q; } catch (e) { }
   if (!THEMES[THEME_ID]) THEME_ID = 'city';
   const THEME = THEMES[THEME_ID];
+  const MAPK = GAME_MODE === 'knock' ? .82 : .84; // the maps were drawn larger; everything is pulled in by this much
   const bushes = [], dress = [];  // dress: procedural props made after the scene exists
   function buildArena() {
-    const MAP = GAME_MODE === 'knock' ? { HW: 13, HL: 18 } : { HW: 14, HL: 23 };
+    const MAP = { HW: Math.round((GAME_MODE === 'knock' ? 13 : 14) * MAPK * 10) / 10, HL: Math.round((GAME_MODE === 'knock' ? 18 : 23) * MAPK * 10) / 10 };
     const items = [], colliders = [], city = THEME_ID === 'city';
     const put = (id, x, z, ry, sx, sy, sz, y) => items.push([id, x, y || 0, z, 0, ry || 0, 0, sx || 1, sy || sx || 1, sz || sx || 1]);
     const boxC = (x, z, hx, hz, ry, h) => colliders.push({ t: 'b', kind: 'ob', x, z, hx, hz, ry: ry || 0, hFix: h });
     const circC = (x, z, r, h) => colliders.push({ t: 'c', kind: 'ob', x, z, r, hFix: h });
     // the four kinds of cover; each theme draws them its own way
     const T = THEME_ID, rr = () => Math.random() * 6.28, RK = T === 'desert' ? 'qd_Rock_Medium_' : 'q_Rock_Medium_', ri = i => 1 + ((i % 3) + 3) % 3;
-    const wall = (x, z, len, ry) => { boxC(x, z, len / 2, .62, ry, 2.6); const co = Math.cos(ry), si = Math.sin(ry), at = k => [x + co * k, z - si * k];
+    const wall = (x, z, len, ry) => { x *= MAPK; z *= MAPK; boxC(x, z, len / 2, .62, ry, 2.6); const co = Math.cos(ry), si = Math.sin(ry), at = k => [x + co * k, z - si * k];
       if (city) put('container_' + (1 + (Math.abs(Math.round(x * 3 + z)) % 3)), x, z, ry + Math.PI / 2, 1, 1, len / 6.1);
       else { const n = Math.max(2, Math.round(len / 2)); for (let i = 0; i < n; i++) { const [px, pz] = at(-len / 2 + len * (i + .5) / n); put(RK + ri(i + Math.round(x)), px, pz, rr(), .62, .75, .55); } } };
-    const low = (x, z, len, ry) => { boxC(x, z, len / 2, .34, ry, .9);
+    const low = (x, z, len, ry) => { x *= MAPK; z *= MAPK; boxC(x, z, len / 2, .34, ry, .9);
       if (city) put('jersey_concrete_1', x, z, ry + Math.PI / 2, 1, 1, len / 3);
       else if (T === 'beach') put('sandbags_row_1', x, z, ry, len / 2.16, 2.2, 1.9);
       else { const n = Math.max(3, Math.round(len / .75)); for (let i = 0; i < n; i++) { const k = -len / 2 + len * (i + .5) / n; put(RK + ri(i + Math.round(x)), x + Math.cos(ry) * k, z - Math.sin(ry) * k, rr(), .3, .42 + Math.random() * .12, .26); } } };
-    const box = (x, z, s, ry) => { boxC(x, z, s / 2, s / 2, ry || 0, 1.3);
+    const box = (x, z, s, ry) => { x *= MAPK; z *= MAPK; boxC(x, z, s / 2, s / 2, ry || 0, 1.3);
       if (city || T === 'beach') put(s > 1 ? 'crate_1' : 'crate_2', x, z, ry || 0, s / (s > 1 ? 1.1 : .8));
       else put(RK + ri(Math.round(x * 7)), x, z, rr(), s * .36, s * .5, s * .36); };
-    const rock = (x, z, r) => { circC(x, z, r, 1.6);
+    const rock = (x, z, r) => { x *= MAPK; z *= MAPK; circC(x, z, r, 1.6);
       if (city) put('tire_stack_5', x, z, x, r / .6);
       else put(RK + '2', x, z, rr(), r / 1.55, r / 1.3, r / 1.3); };
     const bush = () => { }; // bushes removed (they did not add anything) - the layout keeps the spots open
@@ -57,7 +58,7 @@ async function boot() {
       });
       wall(0, 0, 3, Math.PI / 2);
       return { arena: { halfWidth: MAP.HW, halfLength: MAP.HL }, items: items.concat(borderItems(MAP)), colliders, buildings: [], signs: [], turret: { id: 'turret', x: 0, y: -60, z: 0 },
-        spawns: { A: [[-3, 16], [0, 16.6], [3, 16]], B: [[3, -16], [0, -16.6], [-3, -16]] } };
+        spawns: { A: [[-3, MAP.HL - 2], [0, MAP.HL - 1.4], [3, MAP.HL - 2]], B: [[3, -MAP.HL + 2], [0, -MAP.HL + 1.4], [-3, -MAP.HL + 2]] } };
     }
     // City Hall: hall in the middle, two power links on the flanks, a titan camp on each half
     colliders.push({ t: 'b', kind: 'bld', x: 0, z: 0, hx: 2.7, hz: 2.2, ry: 0, hFix: 5, hall: true });
@@ -70,7 +71,7 @@ async function boot() {
       bush(-11.8 * s, 15.5 * s, 3, 3.6); bush(-3.6 * s, 4.8 * s, 2.6, 2); bush(9.8 * s, 9.6 * s, 2.2, 3.2); bush(12.6 * s, -2.6 * s, 1.6, 3.2); bush(4.2 * s, 13 * s, 2.6, 2.2);
     });
     return { arena: { halfWidth: MAP.HW, halfLength: MAP.HL }, items: items.concat(borderItems(MAP)), colliders, buildings: [], signs: [], turret: { id: 'turret', x: 0, y: -60, z: 0 },
-      spawns: { A: [[-3, 20.6], [0, 21.2], [3, 20.6]], B: [[3, -20.6], [0, -21.2], [-3, -20.6]] } };
+      spawns: { A: [[-3, MAP.HL - 2.4], [0, MAP.HL - 1.8], [3, MAP.HL - 2.4]], B: [[3, -MAP.HL + 2.4], [0, -MAP.HL + 1.8], [-3, -MAP.HL + 2.4]] } };
   }
   // models placed outside the play area, plus small non-blocking decoration inside it
   function borderItems(M) {
@@ -632,15 +633,15 @@ async function boot() {
   // A mode file (x_city.js / x_knock.js) fills MODE with its objectives, HUD and bot jobs.
   // =====================================================================================================
   const RULES = {
-    radius: .42, accel: 12, respawn: 4, regenDelay: 3, regen: 16, baseHeal: 50, baseR: 4.5, spawnProt: 2,
+    radius: .42, accel: 12, respawn: 3.5, regenDelay: 3, regen: 18, baseHeal: 50, baseR: 4.5, spawnProt: 2,
     match: 240, overtime: 60, ammo: 3, revealT: 1.3, bushSee: 2.6, underdog: 1.25,
     titan: [null, { hp: 1100, hit: 26, base: 60, speed: 2.4, size: 1.15 }, { hp: 1500, hit: 32, base: 75, speed: 2.4, size: 1.25 }, { hp: 1900, hit: 40, base: 90, speed: 2.5, size: 1.35 }],
     pad: { heal: 60, every: 15 },
   };
   const HEROES = {
-    brownhair_kid: { name: 'Boy', role: 'לוחם', hp: 170, speed: 4.9, weapon: 'sword', sup: 'charge', supName: 'הסתערות', need: 220, tip: 'חרב רחבה מקרוב. הסופר: זינוק שפוגע בכל מי שבדרך.' },
-    purplegirl: { name: 'Girl', role: 'קשתית', hp: 115, speed: 4.7, weapon: 'bow', sup: 'jet', supName: "ג'טפק", need: 190, tip: 'חץ חזק מרחוק. הסופר: טיסה מעל קירות ונחיתה מתפוצצת.' },
-    ginger_kid: { name: 'Ginger', role: 'תומך', hp: 140, speed: 4.7, weapon: 'pistol', sup: 'heal', supName: 'שדה ריפוי', need: 180, tip: 'צרור של שתי יריות. הסופר: שדה שמרפא את כל הקבוצה.' },
+    brownhair_kid: { name: 'Boy', role: 'לוחם', hp: 220, cd: 7, speed: 4.9, weapon: 'sword', sup: 'charge', supName: 'הסתערות', need: 220, tip: 'חרב רחבה מקרוב. הסופר: זינוק שפוגע בכל מי שבדרך.' },
+    purplegirl: { name: 'Girl', role: 'קשתית', hp: 150, cd: 9, speed: 4.7, weapon: 'bow', sup: 'jet', supName: "ג'טפק", need: 190, tip: 'חץ חזק מרחוק. הסופר: טיסה מעל קירות ונחיתה מתפוצצת.' },
+    ginger_kid: { name: 'Ginger', role: 'תומך', hp: 180, cd: 12, speed: 4.7, weapon: 'pistol', sup: 'heal', supName: 'שדה ריפוי', need: 180, tip: 'צרור של שתי יריות. הסופר: שדה שמרפא את כל הקבוצה.' },
   };
   const MODE = { name: '', objs: () => [], update() { }, reset() { }, think() { return false; }, hud() { }, mini() { }, timeUp() { endMatch(null, 'תיקו'); }, onKill() { }, onTitanKilled() { }, titanGoal() { return null; }, start() { }, roundBased: false };
   const enemyOf = t => t === 'A' ? 'B' : t === 'B' ? 'A' : 'N', teams = { A: { color: 'blue', members: [], kills: 0, score: 0 }, B: { color: 'red', members: [], kills: 0, score: 0 } };
@@ -658,12 +659,24 @@ async function boot() {
   function makeHpLabel() { const cv = document.createElement('canvas'); cv.width = 128; cv.height = 48; const t = new THREE.CanvasTexture(cv); const s = new THREE.Sprite(new THREE.SpriteMaterial({ map: t, transparent: true, depthTest: false, depthWrite: false })); s.scale.set(1.05, .4, 1); s.renderOrder = 10; scene.add(s); return { s, cv, t, v: -1 }; }
   function setHpLabel(L, v, color) { if (L.v === v && L.c === color) return; L.v = v; L.c = color; const c = L.cv.getContext('2d'); c.clearRect(0, 0, 128, 48); c.font = '900 36px Rubik, Arial'; c.textAlign = 'center'; c.textBaseline = 'middle'; c.lineWidth = 7; c.strokeStyle = '#0b0c10'; c.strokeText(String(v), 64, 26); c.fillStyle = color; c.fillText(String(v), 64, 26); L.t.needsUpdate = true; }
 
+  // ---- hero bar: one canvas sprite - rounded bar, team colour fill, the HP number inside, green glow while healing ----
+  function makeHpBar() { const cv = document.createElement('canvas'); cv.width = 256; cv.height = 64; const t = new THREE.CanvasTexture(cv); t.encoding = THREE.sRGBEncoding; const s = new THREE.Sprite(new THREE.SpriteMaterial({ map: t, transparent: true, depthTest: false, depthWrite: false })); s.scale.set(1.5, .375, 1); s.renderOrder = 10; s.userData = { cv, t, key: '' }; return s; }
+  function drawHpBar(bar, hp, max, col, heal, me) {
+    const v = Math.max(0, Math.ceil(hp)), k = Math.max(0, Math.min(1, hp / max)), key = v + '|' + col + '|' + (heal ? 1 : 0) + '|' + (me ? 1 : 0); if (bar.userData.key === key) return; bar.userData.key = key;
+    const x = bar.userData.cv.getContext('2d'), rr = (X, Y, W, H, R) => { x.beginPath(); x.moveTo(X + R, Y); x.arcTo(X + W, Y, X + W, Y + H, R); x.arcTo(X + W, Y + H, X, Y + H, R); x.arcTo(X, Y + H, X, Y, R); x.arcTo(X, Y, X + W, Y, R); x.closePath(); };
+    x.clearRect(0, 0, 256, 64); rr(4, 8, 248, 50, 14); x.fillStyle = '#0b0c10'; x.fill(); if (heal) { x.lineWidth = 5; x.strokeStyle = '#5dff7a'; x.stroke(); }
+    if (k > 0) { rr(10, 14, Math.max(24, 236 * k), 38, 10); const low = k < .35, g = x.createLinearGradient(0, 14, 0, 52); g.addColorStop(0, low ? '#ff8c80' : col === 'me' ? '#9dff9a' : col === 'A' ? '#8cc4ff' : '#ff958c'); g.addColorStop(1, low ? '#d8392d' : col === 'me' ? '#2fc84a' : col === 'A' ? '#2a7bdc' : '#d23a30'); x.fillStyle = g; x.fill(); }
+    x.font = '900 36px Rubik, Arial'; x.textAlign = 'center'; x.textBaseline = 'middle'; x.lineWidth = 7; x.strokeStyle = '#0b0c10'; x.strokeText(String(v), 128, 34); x.fillStyle = '#fff'; x.fillText(String(v), 128, 34);
+    if (heal) { x.fillStyle = '#5dff7a'; x.font = '900 34px Rubik, Arial'; x.fillText('+', 228, 33); }
+    bar.userData.t.needsUpdate = true;
+  }
+
   // ---- actors ----
   const actors = [];
   function makeActor(heroKey, side, slot) {
     const H = HEROES[heroKey], color = teams[side].color, c = makeChar(A2['chars/' + heroKey + '_' + color], heroKey + '_' + color); styleBody(c, .82, 1.3);
     const ring = new THREE.Mesh(new THREE.RingGeometry(.52, .66, 28), new THREE.MeshBasicMaterial({ color: TEAM_HEX[color], transparent: true, opacity: .95, depthWrite: false })); ring.rotation.x = -Math.PI / 2; ring.position.y = .03; ring.renderOrder = 2; c.holder.add(ring);
-    const bar = makeBar(1.15, TEAM_HEX[color]), ammo = makeBar(1.15, 0xffb52e), sup = new THREE.Mesh(new THREE.RingGeometry(.74, .9, 32), new THREE.MeshBasicMaterial({ color: 0xffd21f, transparent: true, opacity: .95, depthWrite: false })); sup.rotation.x = -Math.PI / 2; sup.position.y = .035; sup.visible = false; c.holder.add(sup);
+    const bar = makeHpBar(), ammo = makeBar(1.15, 0xffb52e), sup = new THREE.Mesh(new THREE.RingGeometry(.74, .9, 32), new THREE.MeshBasicMaterial({ color: 0xffd21f, transparent: true, opacity: .95, depthWrite: false })); sup.rotation.x = -Math.PI / 2; sup.position.y = .035; sup.visible = false; c.holder.add(sup);
     scene.add(bar, ammo); scene.add(c.holder); attach(c, WEAPONS[H.weapon].model); if (H.sup === 'jet') attach(c, 'jetpack');
     const a = { c, H, heroKey, side, slot, name: H.name, W: WEAPONS[H.weapon], hp: H.hp, maxHp: H.hp, alive: true, state: 'free', ammo: RULES.ammo, sup: 0, atkCd: 0, shot: null, shot2: 0, lastHit: -9, respawnT: 0, prot: 0, upT: 0, carry: null, kills: 0, dmg: 0, deaths: 0, revealT: 0, hidden: false, seen: true,
       inp: { mx: 0, mz: 0 }, aimYaw: 0, aiming: false, mvx: 0, mvz: 0, ring, bar, ammoBar: ammo, supRing: sup, lbl: makeHpLabel(), isPlayer: false };
@@ -675,7 +688,7 @@ async function boot() {
     a.hp = 0; a.alive = false; a.deaths++; a.respawnT = MODE.roundBased ? 1e9 : RULES.respawn; a.shot = null; a.aiming = false; if (a.carry && a.carry.drop) a.carry.drop(a); a.c.holder.position.y = 0; a.state = 'dead'; if (a.c.up) upperStop(a.c, .05); a.c.baseName = ''; play(a.c, Math.random() < .5 ? 'death1' : 'death2', { fade: .08 }); setGhost(a.c, false); a.c.holder.visible = true;
     a.ring.visible = a.bar.visible = a.ammoBar.visible = a.supRing.visible = false; a.lbl.s.visible = false; SFX.play('death', a.x, a.z); for (let i = 0; i < 6; i++) puff(a.x + rnd(-.4, .4), rnd(.3, 1.4), a.z + rnd(-.4, .4), teamHex(a.side), .22, .5, 2.2);
     const by = src && src.name ? src.name : '—'; feed(by + ' ← ' + a.name, src && (src.side === 'A' || src.side === 'B') ? src.side : enemyOf(a.side));
-    if (src && src.H) { src.kills++; teams[src.side].kills++; src.sup = Math.min(1, src.sup + .15); if (src.isPlayer) { SFX.play('kill'); banner('חיסלת את ' + a.name + '!', '#ffd21f', 1.1); hitStop = .08; } }
+    if (src && src.H) { src.kills++; teams[src.side].kills++; if (src.isPlayer) { SFX.play('kill'); banner('חיסלת את ' + a.name + '!', '#ffd21f', 1.1); hitStop = .08; } }
     if (a.isPlayer) shake = .5; MODE.onKill(a, src);
   }
   // fewer of you alive than of them: you hit harder and charge faster (one good player can turn it around)
@@ -683,11 +696,11 @@ async function boot() {
   function hurt(t, dmg, src) {
     if (matchOver || dmg <= 0 || freezeT > 0) return;
     if (src && src.H) dmg *= underdog(src.side);
-    if (t.isObj) { if (t.dead || t.hp <= 0) return; t.hp = Math.max(0, t.hp - dmg); t.hitT = .15; popNum(t.x, t.z, '' + Math.round(dmg), '#ffd21f'); SFX.play('coreHit', t.x, t.z, .1); if (src && src.H) { src.sup = Math.min(1, src.sup + dmg * .45 / src.H.need); src.dmg += dmg; } t.onHurt && t.onHurt(dmg, src); return; }
-    if (t.isTitan) { if (t.dead) return; t.hp -= dmg; flash(t.c, 0xffffff); setBar(t.bar, t.hp / t.maxHp); popNum(t.x, t.z, '' + Math.round(dmg), '#ffffff'); if (src && src.H) { src.sup = Math.min(1, src.sup + dmg * .6 / src.H.need); src.dmg += dmg; t.threat = src; t.dmgBy[src.side] = (t.dmgBy[src.side] || 0) + dmg; } if (t.hp <= 0) titanDied(t, src); return; }
+    if (t.isObj) { if (t.dead || t.hp <= 0) return; t.hp = Math.max(0, t.hp - dmg); t.hitT = .15; popNum(t.x, t.z, '' + Math.round(dmg), '#ffd21f'); SFX.play('coreHit', t.x, t.z, .1); if (src && src.H) src.dmg += dmg; t.onHurt && t.onHurt(dmg, src); return; }
+    if (t.isTitan) { if (t.dead) return; t.hp -= dmg; flash(t.c, 0xffffff); setBar(t.bar, t.hp / t.maxHp); popNum(t.x, t.z, '' + Math.round(dmg), '#ffffff'); if (src && src.H) { src.dmg += dmg; t.threat = src; t.dmgBy[src.side] = (t.dmgBy[src.side] || 0) + dmg; } if (t.hp <= 0) titanDied(t, src); return; }
     if (!t.alive || t.prot > 0 || t.state === 'fly') return; if (t.isPlayer && DBG.god) return;
     t.hp -= dmg; t.lastHit = NOW; t.revealT = NOW + .8; flash(t.c, 0xff3b30); popNum(t.x, t.z, '' + Math.round(dmg), t.isPlayer ? '#ff6a5e' : '#ffffff', dmg >= 30);
-    if (src && src.H) { src.sup = Math.min(1, src.sup + dmg / src.H.need * underdog(src.side)); src.dmg += dmg; if (src.isPlayer) hitStop = Math.max(hitStop, .03); }
+    if (src && src.H) { src.dmg += dmg; if (src.isPlayer) hitStop = Math.max(hitStop, .03); }
     if (t.isPlayer) { SFX.play('hurtMe', undefined, undefined, .08); shake = Math.max(shake, .22); onPlayerHit(); } else if (src && src.isPlayer) SFX.play('thud', t.x, t.z, .05);
     if (t.hp <= 0) kill(t, src);
   }
@@ -757,7 +770,7 @@ async function boot() {
     c.holder.position.set(x, 0, z); c.yaw = opts.yaw || 0; c.holder.visible = true; c.baseName = ''; c.base = null; c.mixer.stopAllAction(); play(c, 'Idle', { fade: 0 }); c.tring.material.color.setHex(teamHex(side)); t.bar.userData.fg.material.color.setHex(side === 'N' ? 0xffb52e : teamHex(side)); setBar(t.bar, 1); t.bar.visible = true; titans.push(t);
     for (let i = 0; i < 8; i++) puff(x + rnd(-1, 1), rnd(.5, 2.5), z + rnd(-1, 1), teamHex(side), .5, .6, 2); return t;
   }
-  function titanDied(t, src) { t.dead = true; t.t = 1.6; t.tele.material.opacity = 0; t.bar.visible = false; t.lbl.s.visible = false; play(t.c, 'death1', { fade: .08 }); SFX.play('blast', t.x, t.z); shake = Math.max(shake, .25); if (src && src.H) src.sup = Math.min(1, src.sup + .4); MODE.onTitanKilled(t, src); }
+  function titanDied(t, src) { t.dead = true; t.t = 1.6; t.tele.material.opacity = 0; t.bar.visible = false; t.lbl.s.visible = false; play(t.c, 'death1', { fade: .08 }); SFX.play('blast', t.x, t.z); shake = Math.max(shake, .25); MODE.onTitanKilled(t, src); }
   function clearTitans() { for (const t of titans) { t.c.holder.visible = false; t.c.busy = false; t.bar.visible = false; t.lbl.s.visible = false; scene.remove(t.tele); } titans.length = 0; }
   function updateTitans(dt) {
     for (let i = titans.length - 1; i >= 0; i--) {
@@ -793,12 +806,12 @@ async function boot() {
   function updateActor(a, dt) {
     const c = a.c, p = c.holder.position, W = a.W; if (c.flashT > 0 && (c.flashT -= dt) <= 0) for (const m of c.mats) m.emissiveIntensity = 0;
     if (!a.alive) { a.lbl.s.visible = false; if (!matchOver && (a.respawnT -= dt) <= 0) respawn(a); return; }
-    a.atkCd -= dt; a.prot -= dt; if (a.ammo < RULES.ammo) a.ammo = Math.min(RULES.ammo, a.ammo + dt / W.reload);
-    const sp0 = layout.spawns[a.side][1], atBase = dist2(a.x, a.z, sp0[0], sp0[1]) < RULES.baseR + 2.5 && !MODE.roundBased; if (a.hp < a.maxHp && (atBase || NOW - a.lastHit > RULES.regenDelay)) a.hp = Math.min(a.maxHp, a.hp + (atBase ? RULES.baseHeal : RULES.regen) * dt);
+    a.atkCd -= dt; a.prot -= dt; if (a.sup < 1) a.sup = Math.min(1, a.sup + dt / a.H.cd); if (a.ammo < RULES.ammo) a.ammo = Math.min(RULES.ammo, a.ammo + dt / W.reload);
+    const sp0 = layout.spawns[a.side][1], atBase = dist2(a.x, a.z, sp0[0], sp0[1]) < RULES.baseR + 2.5 && !MODE.roundBased; const h0 = a.hp; if (a.hp < a.maxHp && (atBase || NOW - a.lastHit > RULES.regenDelay)) a.hp = Math.min(a.maxHp, a.hp + (atBase ? RULES.baseHeal : RULES.regen) * dt); a.healGain = (a.healGain || 0) + (a.hp - h0); a.healing = a.hp - h0 > 0 || (a.healT || 0) > NOW; if (a.hp > h0) a.healT = NOW + .3; if (a.healGain >= 30 && a.isPlayer) { popNum(a.x, a.z, '+' + Math.round(a.healGain), '#5dff7a'); a.healGain = 0; } if (a.hp >= a.maxHp) a.healGain = 0;
     // what the player can see: enemies hidden in bushes vanish, our own team in a bush turns see-through
     const show = DBG.spectate || visibleTo(a, player.side), ghost = a.hidden && a.side === player.side;
     c.holder.visible = show; a.bar.visible = show; a.lbl.s.visible = show; if (c.ghost !== ghost) { setGhost(c, ghost); c.ghost = ghost; }
-    setBar(a.bar, a.hp / a.maxHp); a.bar.position.set(p.x, 2.05 + p.y, p.z); a.lbl.s.position.set(p.x, 2.42 + p.y, p.z); setHpLabel(a.lbl, Math.max(0, Math.ceil(a.hp)), a.isPlayer ? '#7dff8e' : teamCss(a.side));
+    a.lbl.s.visible = false; a.bar.position.set(p.x, 2.15 + p.y, p.z); drawHpBar(a.bar, a.hp, a.maxHp, a.isPlayer ? 'me' : (a.side === player.side ? 'A' : 'B'), a.healing, a.isPlayer);
     a.ammoBar.visible = a.isPlayer && !DBG.spectate; if (a.ammoBar.visible) { a.ammoBar.userData.fg.scale.x = Math.max(.001, a.ammoBar.userData.w * a.ammo / RULES.ammo); a.ammoBar.position.set(p.x, 1.86 + p.y, p.z); }
     a.supRing.visible = a.sup >= 1 && show; if (a.supRing.visible) a.supRing.material.opacity = .6 + .35 * Math.sin(NOW * 8);
     const ox = p.x, oz = p.z, inp = a.inp, frozen = freezeT > 0, mag = frozen ? 0 : Math.min(1, Math.hypot(inp.mx, inp.mz)), moving = mag > .12, mdx = moving ? inp.mx / Math.hypot(inp.mx, inp.mz) : 0, mdz = moving ? inp.mz / Math.hypot(inp.mx, inp.mz) : 0;
@@ -841,7 +854,7 @@ async function boot() {
   const stormWall = new THREE.Mesh(new THREE.CylinderGeometry(1, 1, 5, 64, 1, true), new THREE.MeshBasicMaterial({ color: 0x7a3cff, transparent: true, opacity: .22, depthWrite: false, side: THREE.DoubleSide })); stormWall.position.y = 2.5; stormWall.visible = false; scene.add(stormWall);
   const stormEdge = new THREE.Mesh(new THREE.RingGeometry(.97, 1, 96), new THREE.MeshBasicMaterial({ color: 0xb98aff, transparent: true, opacity: .9, depthWrite: false })); stormEdge.rotation.x = -Math.PI / 2; stormEdge.position.y = .04; stormEdge.visible = false; scene.add(stormEdge);
   { const cv = document.createElement('canvas'); cv.width = 260; cv.height = 360; const x = cv.getContext('2d'), Z = v => (v + HL) * 10; const zone = (z0, z1, col) => { const g = x.createLinearGradient(0, Z(z0), 0, Z(z1)); g.addColorStop(0, col); g.addColorStop(1, 'rgba(0,0,0,0)'); x.fillStyle = g; x.fillRect(0, Math.min(Z(z0), Z(z1)), 260, Math.abs(Z(z1) - Z(z0))); };
-    zone(HL, HL - 4.5, 'rgba(47,139,255,.3)'); zone(-HL, -HL + 4.5, 'rgba(255,77,66,.3)'); x.strokeStyle = THEME.paint; x.lineWidth = 3; x.setLineDash([12, 9]); x.beginPath(); x.moveTo(0, 180); x.lineTo(260, 180); x.stroke();
+     x.strokeStyle = THEME.paint; x.lineWidth = 3; x.setLineDash([12, 9]); x.beginPath(); x.moveTo(0, 180); x.lineTo(260, 180); x.stroke();
     const t = new THREE.CanvasTexture(cv); t.encoding = THREE.sRGBEncoding; const m = new THREE.Mesh(new THREE.PlaneGeometry(2 * HW, 2 * HL), new THREE.MeshBasicMaterial({ map: t, transparent: true, depthWrite: false })); m.rotation.x = -Math.PI / 2; m.position.y = .012; m.renderOrder = 1; scene.add(m); }
   addPad(0, 0);
   function newRound() { for (const s of shots) scene.remove(s.m); shots.length = 0; for (const f of fields) { scene.remove(f.ring); scene.remove(f.kit); } fields.length = 0;
@@ -1000,7 +1013,7 @@ async function boot() {
 
   // ---------- camera ----------
   const camT = new THREE.Vector3(), CAM = { y: 11.2, z: 8.2 }, spec = { x: 0, z: 0, follow: null, zoom: 1.7 }, sd = { id: null, x: 0, y: 0 }; let zoom = 1;
-  function resize() { const w = window.innerWidth, h = window.innerHeight; renderer.setSize(w, h, false); camera.aspect = w / h; camera.fov = w < h ? 54 : 40; zoom = w < h ? 1.35 : 1.12; camera.updateProjectionMatrix(); restSticks(); }
+  function resize() { const w = window.innerWidth, h = window.innerHeight; renderer.setSize(w, h, false); camera.aspect = w / h; camera.fov = w < h ? 54 : 40; zoom = w < h ? 1.1 : .9; camera.updateProjectionMatrix(); restSticks(); }
   window.addEventListener('resize', resize); window.addEventListener('orientationchange', () => setTimeout(resize, 200));
   function specCycle(d) { let i = spec.follow ? actors.indexOf(spec.follow) : -1; spec.follow = actors[(i + d + actors.length) % actors.length]; }
   touchEl.addEventListener('wheel', e => { if (DBG.spectate) { spec.zoom = clamp(spec.zoom * (e.deltaY > 0 ? 1.1 : .9), .7, 3); e.preventDefault(); } }, { passive: false });
@@ -1020,12 +1033,12 @@ async function boot() {
     const a = player, t = Math.max(0, matchT), ot = t <= RULES.overtime && !MODE.roundBased; $('clock').textContent = fmt(t); $('clock').classList.toggle('ot', ot); if (!MODE.roundBased) $('otTag').hidden = !ot || !started;
     MODE.hud();
     for (const m of teams[a.side].members) { if (!m.mateEl) continue; m.mateEl.classList.toggle('dead', !m.alive); m.mateEl.querySelector('em').textContent = m.alive ? '' : (MODE.roundBased ? '✕' : Math.ceil(m.respawnT)); m.mateEl.querySelector('b').style.width = (Math.max(0, m.hp) / m.maxHp * 100) + '%'; }
-    const sb = $('btnSuper'); sb.classList.toggle('ready', a.sup >= 1); sb.style.setProperty('--k', (a.sup * 360) + 'deg'); $('supName').textContent = a.H.supName;
+    const sb = $('btnSuper'); sb.classList.toggle('ready', a.sup >= 1); sb.style.setProperty('--k', (a.sup * 360) + 'deg'); const sl = a.H.supName + (a.sup < 1 ? '|' + Math.ceil((1 - a.sup) * a.H.cd) : ''); if (sb.dataset.l !== sl) { sb.dataset.l = sl; $('supName').innerHTML = a.sup < 1 ? '<small>' + Math.ceil((1 - a.sup) * a.H.cd) + '</small>' : a.H.supName; } $('vig').classList.toggle('low', a.alive && a.hp < a.maxHp * .35 && !DBG.spectate && !matchOver);
     $('dead').hidden = a.alive || !!matchOver || DBG.spectate; if (!a.alive) $('dead').textContent = MODE.roundBased ? 'נפלת — הצופים על החברים' : 'חוזרים בעוד ' + Math.ceil(a.respawnT);
     $('carry').hidden = !a.carry; if (toastT > 0 && (toastT -= .033) <= 0) $('noAmmo').hidden = true;
   }
   // ---------- minimap ----------
-  const mini = $('mini'), mctx = mini.getContext('2d'), mdpr = Math.min(2, dpr), MS = 2.9; mini.style.width = (2 * HW * MS) + 'px'; mini.style.height = (2 * HL * MS) + 'px'; mini.width = 2 * HW * MS * mdpr; mini.height = 2 * HL * MS * mdpr;
+  const mini = $('mini'), mctx = mini.getContext('2d'), mdpr = Math.min(2, dpr), MS = 3; mini.style.width = (2 * HW * MS) + 'px'; mini.style.height = (2 * HL * MS) + 'px'; mini.width = 2 * HW * MS * mdpr; mini.height = 2 * HL * MS * mdpr;
   function drawMini() {
     const x = mctx, k = MS * mdpr, X = v => (v + HW) * k, Z = v => (v + HL) * k, W = mini.width, H = mini.height; x.clearRect(0, 0, W, H); x.fillStyle = '#2b313b'; x.fillRect(0, 0, W, H);
     x.globalAlpha = .35; x.fillStyle = teamCss('A'); x.fillRect(0, Z(HL - 5), W, H - Z(HL - 5)); x.fillStyle = teamCss('B'); x.fillRect(0, 0, W, Z(-HL + 5)); x.globalAlpha = 1; x.fillStyle = 'rgba(80,170,70,.75)'; for (const b of bushes) x.fillRect(X(b.x - b.w), Z(b.z - b.d), b.w * 2 * k, b.d * 2 * k);
@@ -1047,7 +1060,7 @@ async function boot() {
     for (const s of ['A', 'B']) { teams[s].kills = 0; teams[s].score = 0; } for (const m of pads) { m.t = 0; m.mesh.visible = m.halo.visible = true; }
     for (const a of actors) { a.kills = a.dmg = a.deaths = 0; a.sup = 0; a.carry = null; if (a.c.up) upperStop(a.c, 0); respawn(a); a.prot = 0; makeBrain(a); } MODE.reset(); lastSec = 999;
   }
-  function startMatch(a) { if (a) { player.isPlayer = false; player = a; } player.isPlayer = true; resetMatch(); started = true; $('pick').hidden = true; buildMates(); updateCamera(0, true); restSticks(); banner(MODE.intro, '#ffd21f', 3); setTimeout(() => feed('מפה: ' + THEME.name, player.side), 600); SFX.play('start'); }
+  function startMatch(a) { if (a) { player.isPlayer = false; player = a; } player.isPlayer = true; resetMatch(); started = true; $('pick').hidden = true; buildMates(); updateCamera(0, true); restSticks(); banner(MODE.intro, '#ffd21f', 3); { const mi = document.createElement('div'); mi.id = 'mapIntro'; mi.innerHTML = '<small>MAP</small><b></b>'; mi.querySelector('b').textContent = THEME.name; $('stage').appendChild(mi); setTimeout(() => mi.remove(), 2700); } SFX.play('start'); }
   showEnd = () => { const s = matchOver.side, me = player; $('endTitle').textContent = s === null ? 'תיקו' : s === me.side ? 'ניצחון!' : 'הפסד'; $('endTitle').style.color = s === null ? '#fff' : s === me.side ? '#3fdc5d' : '#ff5548'; $('endWhy').textContent = matchOver.why;
     $('endStats').innerHTML = teams[me.side].members.map(m => '<div' + (m === me ? ' class="me"' : '') + '><b>' + m.name + '</b> חיסולים ' + m.kills + ' · נזק ' + Math.round(m.dmg) + ' · נפילות ' + m.deaths + '</div>').join(''); if (!DBG.sim) setTimeout(() => { if (matchOver) $('end').hidden = false; }, 1500); if (window.ARENA_SHELL && !DBG.sim && !DBG.spectate) { const r = ARENA_SHELL.result({ mode: GAME_MODE, hero: ARENA_SHELL.prof.hero, win: s === me.side, draw: s === null, kills: me.kills }); if (r && window.showReward) showReward(r); } };
   $('endBtn').onclick = () => { $('end').hidden = true; if (window.ARENA_SHELL) { ARENA_SHELL.again(); startMatch(player); } else { started = false; $('pick').hidden = false; resetMatch(); } };

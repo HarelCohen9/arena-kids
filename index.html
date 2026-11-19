@@ -97,9 +97,21 @@ button:focus-visible{outline:3px solid var(--volt);outline-offset:3px}
 #rwRow span:nth-child(2){animation-delay:.12s}#rwRow span:nth-child(3){animation-delay:.24s}
 #rwUp{margin:10px auto 0;font-family:var(--f-game);font-size:1.5rem;color:#231a00;background:var(--volt);border:3px solid #000;border-radius:12px;padding:6px 16px;display:inline-block;animation:pop .5s .4s cubic-bezier(.2,1.6,.4,1) both}
 #toast{position:fixed;top:22%;left:50%;transform:translateX(-50%);z-index:30;font-family:var(--f-game);font-size:1.3rem;padding:8px 18px;background:rgba(0,0,0,.7);border:3px solid #000;border-radius:12px;white-space:nowrap;pointer-events:none}
-@media (max-width:760px){#modes{grid-template-columns:1fr 1fr 1fr}.mode{min-height:150px}.mode p{display:none}}
+
 @media (max-height:500px){#play{height:66px;font-size:2rem}#playBox{width:min(210px,34vw)}.btn{width:62px;height:56px}.btn svg{width:24px;height:24px}#plate{min-width:160px;padding:4px 12px 6px}#hName{font-size:1.3rem}#stats{display:none}.arrow{width:44px;height:44px}#heroBox{gap:8px}.mode{min-height:170px}.box{padding:12px}.box h2{font-size:1.4rem;margin-bottom:8px}}
 @media (max-width:560px){#prof{max-width:56vw}.pill{height:32px;font-size:.95rem;padding:0 8px 0 2px}.pill svg{width:24px;height:24px}#res .gem{display:none}#heroBox{bottom:calc(var(--sb) + 172px)}#stats{display:none}#plate{min-width:150px}#playBox{width:min(230px,56vw)}#tools{bottom:calc(var(--sb) + 8px)}}
+
+/* modes: a full screen of big cards */
+#modeModal{padding:0;background:radial-gradient(ellipse at 50% 20%,#24356a,#0b1020 70%)}
+#modeBox{width:100%;height:100%;max-height:none;border:0;border-radius:0;box-shadow:none;background:none;display:flex;flex-direction:column;padding:var(--st) var(--sr) var(--sb) var(--sl);animation:none}
+#modeBox h2{font-size:2rem;margin:4px 0 10px}
+#modes{flex:1;min-height:0;display:flex!important;gap:14px;overflow-x:auto;overflow-y:hidden;scroll-snap-type:x mandatory;padding:6px 4px 14px;align-items:stretch;touch-action:pan-x;justify-content:safe center}
+#modes .mode{flex:0 0 min(270px,64vw);min-height:0;scroll-snap-align:center}
+#modes .mode .art{background-color:#111}
+#modes .mode b{font-size:1.7rem}
+#modes .mode p{display:block!important}
+#modeBox .close{top:calc(var(--st) + 8px);left:calc(var(--sl) + 8px)}
+#mmMap{margin-top:8px;font-family:var(--f-game);font-size:1rem;color:var(--muted)}#mmMap b{display:block;font-weight:400;font-size:2.2rem;color:var(--volt);text-shadow:0 3px 0 #000;-webkit-text-stroke:1px #000;paint-order:stroke fill;animation:pop .5s cubic-bezier(.2,1.6,.4,1)}
 @media (prefers-reduced-motion:reduce){*{animation-duration:.01s!important}}
 </style>
 </head><body>
@@ -134,17 +146,18 @@ button:focus-visible{outline:3px solid var(--volt);outline-offset:3px}
 </div>
 
 <div id="modeModal" class="modal" hidden>
-  <div class="box"><button class="close" type="button" data-close>✕</button><h2>בחרו מצב משחק</h2>
+  <div class="box" id="modeBox"><button class="close" type="button" data-close>✕</button><h2>מצבי משחק</h2>
     <div id="modes">
-      <button class="mode" type="button" data-mode="city"><span class="art" id="artCity"></span><span class="tag">חדש!</span><span class="txt"><b>CITY HALL</b><p>3 נגד 3 · הרסו את העירייה, חברו חשמל לריבוע המדיק, השתלטו על טיטאן ושלטו ב-Hot Zone.</p></span></button>
-      <button class="mode" type="button" data-mode="knock"><span class="art" id="artKnock"></span><span class="tag">חדש!</span><span class="txt"><b>KNOCKOUT</b><p>3 נגד 3 · בלי חזרה לחיים. חסלו את כל הקבוצה, הראשונים ל-2 סיבובים מנצחים.</p></span></button>
-      <button class="mode" type="button" data-mode="titan"><span class="art" id="artTitan"></span><span class="txt"><b>TITAN RUSH</b><p>3 נגד 3 · כבשו עמודים, טענו טיטאן ענק וליוו אותו להשמיד את הכור של היריב.</p></span></button>
+      <button class="mode" type="button" data-mode="classic"><span class="art" id="artClassic"></span><span class="txt"><b>CITY HALL</b><p>המשחק המלא: שלושה מסלולי שדרוג, מבנים, נשקים, שומרים, העירייה וה-Hot Zone.</p></span></button>
+      <button class="mode" type="button" data-mode="city"><span class="art" id="artCity"></span><span class="tag">חדש!</span><span class="txt"><b>CITY HALL RUSH</b><p>קצר ומהיר: הרסו את העירייה, חברו את המדיק, השתלטו על טיטאן ותפסו את ה-Hot Zone.</p></span></button>
+      <button class="mode" type="button" data-mode="knock"><span class="art" id="artKnock"></span><span class="tag">חדש!</span><span class="txt"><b>KNOCKOUT</b><p>בלי חזרה לחיים. חסלו את כל הקבוצה, הראשונים ל-2 סיבובים.</p></span></button>
+      <button class="mode" type="button" data-mode="titan"><span class="art" id="artTitan"></span><span class="txt"><b>TITAN RUSH</b><p>כבשו עמודים, טענו טיטאן ענק וליוו אותו אל הכור של היריב.</p></span></button>
     </div>
   </div>
 </div>
 
 <div id="mmModal" class="modal" hidden>
-  <div class="box" id="mmBox"><h2 id="mmTitle">TITAN RUSH</h2><div id="mmText">מחפש שחקנים…</div><div class="slots" id="mmSlots"></div><button id="mmCancel" type="button">ביטול</button></div>
+  <div class="box" id="mmBox"><h2 id="mmTitle">TITAN RUSH</h2><div id="mmText">מחפש שחקנים…</div><div class="slots" id="mmSlots"></div><div id="mmMap" hidden></div><button id="mmCancel" type="button">ביטול</button></div>
 </div>
 
 <div id="nameModal" class="modal" hidden>

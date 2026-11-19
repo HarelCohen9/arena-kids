@@ -1,4 +1,4 @@
-const C='arena-mwnp9rmq';
+const C='arena-mwnqh0yg';
 self.addEventListener('install',e=>self.skipWaiting());
 self.addEventListener('activate',e=>e.waitUntil(caches.keys().then(k=>Promise.all(k.filter(n=>n!==C).map(n=>caches.delete(n)))).then(()=>self.clients.claim())));
 self.addEventListener('fetch',e=>{const r=e.request;if(r.method!=='GET')return;const u=new URL(r.url);const page=r.mode==='navigate'||u.pathname.endsWith('.html');

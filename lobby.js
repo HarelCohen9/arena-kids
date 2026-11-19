@@ -245,9 +245,12 @@ async function boot() {
   const BOLT = "url(\"data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Cpath d='M58 4 22 56h22l-8 40 42-58H54z' fill='%23ffd21f' stroke='%23000' stroke-width='5' stroke-linejoin='round'/%3E%3C/svg%3E\")";
   const ART_TITAN = BOLT + " center/55% no-repeat, linear-gradient(125deg,#ff5a4d 0 48%,#0b0f1e 48% 52%,#2f8bff 52%)", ART_CITY = "url(splash.jpg) 50% 12%/240% no-repeat";
   $('artTitan').style.background = BOLT + " 50% 38%/46% no-repeat, radial-gradient(circle at 50% 40%,rgba(255,255,255,.25),transparent 55%), linear-gradient(125deg,#ff5a4d 0 48%,#0b0f1e 48% 52%,#2f8bff 52%)";
-  $('artCity').style.background = "url(splash.jpg) 50% 8%/190% no-repeat";
-  const ART_KNOCK = "radial-gradient(circle at 50% 45%,#b98aff 0 18%,transparent 19%), repeating-conic-gradient(from 0deg at 50% 45%,#5b2bbf 0 10deg,#3a1a86 10deg 20deg)"; $('artKnock').style.background = ART_KNOCK;
-  const MODES = { city: { n: 'City Hall', art: ART_CITY, page: 'city.html' }, knock: { n: 'Knockout', art: ART_KNOCK, page: 'knock.html' }, titan: { n: 'Titan Rush', art: ART_TITAN, page: 'titan.html' } };
+  const crop = (x, tint) => tint + ", url(splash.jpg) " + x + "% 30%/auto 118% no-repeat";
+  $('artClassic').style.background = crop(40, 'linear-gradient(180deg,rgba(0,0,0,0) 60%,rgba(0,0,0,.2))');
+  $('artCity').style.background = BOLT + " 88% 6%/26% no-repeat, " + crop(50, 'linear-gradient(180deg,rgba(255,150,40,.35),rgba(255,90,20,.25))');
+  $('artTitan').style.background = BOLT + " 88% 6%/26% no-repeat, " + crop(67, 'linear-gradient(125deg,rgba(255,77,66,.45) 0 48%,rgba(47,139,255,.45) 52%)');
+  const ART_KNOCK = crop(31, 'linear-gradient(180deg,rgba(110,50,220,.5),rgba(60,20,140,.45))'); $('artKnock').style.background = ART_KNOCK;
+  const MODES = { classic: { n: 'City Hall', art: ART_CITY, page: 'classic.html' }, city: { n: 'City Hall Rush', art: crop(50, 'linear-gradient(rgba(255,150,40,.35),rgba(255,90,20,.25))'), page: 'city.html' }, knock: { n: 'Knockout', art: ART_KNOCK, page: 'knock.html' }, titan: { n: 'Titan Rush', art: ART_TITAN, page: 'titan.html' } };
   const MAPS = { city: 'רחובות העיר', forest: 'היער', beach: 'חוף הים', desert: 'הקניון' };
   let toastT = 0; const toast = t => { $('toast').textContent = t; $('toast').hidden = false; toastT = 1.8; };
   function idx() { return CHAR_IDS.indexOf(cur.id.replace('_blue', '')); }
@@ -269,13 +272,13 @@ async function boot() {
   // matchmaking: the six slots fill up, then the match page opens
   let mmTimers = [];
   function matchmake() {
-    const md = MODES[P.mode] || MODES.city, mk = Object.keys(MAPS); P.nextMap = P.mode === 'titan' ? 'city' : mk[Math.floor(Math.random() * mk.length)]; S.save(); $('mmTitle').textContent = md.n.toUpperCase() + ' · ' + MAPS[P.nextMap]; $('mmText').textContent = 'מחפש שחקנים… 1/6';
+    $('mmMap').hidden = true; const md = MODES[P.mode] || MODES.city, mk = Object.keys(MAPS); P.nextMap = P.mode === 'titan' || P.mode === 'classic' ? 'city' : mk[Math.floor(Math.random() * mk.length)]; S.save(); $('mmTitle').textContent = md.n.toUpperCase() + ' · ' + MAPS[P.nextMap]; $('mmText').textContent = 'מחפש שחקנים… 1/6';
     const box = $('mmSlots'); box.innerHTML = ''; const order = [P.hero].concat(CHAR_IDS.filter(h => h !== P.hero)), slots = [];
     for (let i = 0; i < 6; i++) { const d = document.createElement('div'); d.className = 'slot'; d.textContent = '?'; box.appendChild(d); slots.push(d); if (i === 2) { const vs = document.createElement('div'); vs.className = 'g'; vs.style.cssText = 'align-self:center;font-size:1.4rem;color:#ffd21f'; vs.textContent = 'VS'; box.appendChild(vs); } }
     const fillSlot = (i) => { const d = slots[i], id = i < 3 ? order[i] : CHAR_IDS[i - 3]; d.className = 'slot in' + (i >= 3 ? ' foe' : ''); d.innerHTML = '<img alt="">'; d.firstChild.src = portraits[id]; $('mmText').textContent = (i < 5 ? 'מחפש שחקנים… ' : 'נמצאו שחקנים! ') + (i + 1) + '/6'; blip(500 + i * 60, .1); };
     fillSlot(0); open('mmModal'); mmTimers.forEach(clearTimeout); mmTimers = [];
     [1, 3, 4, 2, 5].forEach((i, k) => mmTimers.push(setTimeout(() => fillSlot(i), 350 + k * 280 + Math.random() * 120)));
-    mmTimers.push(setTimeout(() => { $('mmText').textContent = 'יוצאים לקרב!'; blip(880, .3); S.go(md.page); }, 2300));
+    mmTimers.push(setTimeout(() => { $('mmText').textContent = 'יוצאים לקרב!'; const mm = $('mmMap'); mm.hidden = false; mm.innerHTML = 'המפה<b></b>'; mm.querySelector('b').textContent = P.mode === 'classic' ? 'העיר הגדולה' : MAPS[P.nextMap]; blip(880, .3); }, 2100)); mmTimers.push(setTimeout(() => S.go(md.page), 3300));
   }
   $('mmCancel').onclick = () => { mmTimers.forEach(clearTimeout); mmTimers = []; close('mmModal'); };
   // rewards from the match we just came back from

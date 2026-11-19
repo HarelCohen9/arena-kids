@@ -507,13 +507,25 @@ async function boot() {
   function popNum(x, z, text, color, big) { const p = pops[popI = (popI + 1) % pops.length], c = p.cv.getContext('2d'); c.clearRect(0, 0, 128, 64); c.font = '900 ' + (big ? 50 : 40) + 'px Rubik, Arial'; c.textAlign = 'center'; c.textBaseline = 'middle'; c.lineWidth = 8; c.strokeStyle = '#0b0c10'; c.strokeText(text, 64, 34); c.fillStyle = color; c.fillText(text, 64, 34); p.t.needsUpdate = true; p.s.position.set(x + rnd(-.3, .3), 2.2, z); p.s.visible = true; p.life = .8; p.s.material.opacity = 1; }
   function updatePops(dt) { for (const p of pops) if (p.life > 0) { p.life -= dt; p.s.position.y += dt * 1.6; p.s.material.opacity = Math.min(1, p.life * 3); if (p.life <= 0) p.s.visible = false; } }
 
+  // ---- hero bar: one canvas sprite - rounded bar, team colour fill, the HP number inside, green glow while healing ----
+  function makeHpBar() { const cv = document.createElement('canvas'); cv.width = 256; cv.height = 64; const t = new THREE.CanvasTexture(cv); t.encoding = THREE.sRGBEncoding; const s = new THREE.Sprite(new THREE.SpriteMaterial({ map: t, transparent: true, depthTest: false, depthWrite: false })); s.scale.set(1.5, .375, 1); s.renderOrder = 10; s.userData = { cv, t, key: '' }; return s; }
+  function drawHpBar(bar, hp, max, col, heal, me) {
+    const v = Math.max(0, Math.ceil(hp)), k = Math.max(0, Math.min(1, hp / max)), key = v + '|' + col + '|' + (heal ? 1 : 0) + '|' + (me ? 1 : 0); if (bar.userData.key === key) return; bar.userData.key = key;
+    const x = bar.userData.cv.getContext('2d'), rr = (X, Y, W, H, R) => { x.beginPath(); x.moveTo(X + R, Y); x.arcTo(X + W, Y, X + W, Y + H, R); x.arcTo(X + W, Y + H, X, Y + H, R); x.arcTo(X, Y + H, X, Y, R); x.arcTo(X, Y, X + W, Y, R); x.closePath(); };
+    x.clearRect(0, 0, 256, 64); rr(4, 8, 248, 50, 14); x.fillStyle = '#0b0c10'; x.fill(); if (heal) { x.lineWidth = 5; x.strokeStyle = '#5dff7a'; x.stroke(); }
+    if (k > 0) { rr(10, 14, Math.max(24, 236 * k), 38, 10); const low = k < .35, g = x.createLinearGradient(0, 14, 0, 52); g.addColorStop(0, low ? '#ff8c80' : col === 'me' ? '#9dff9a' : col === 'A' ? '#8cc4ff' : '#ff958c'); g.addColorStop(1, low ? '#d8392d' : col === 'me' ? '#2fc84a' : col === 'A' ? '#2a7bdc' : '#d23a30'); x.fillStyle = g; x.fill(); }
+    x.font = '900 36px Rubik, Arial'; x.textAlign = 'center'; x.textBaseline = 'middle'; x.lineWidth = 7; x.strokeStyle = '#0b0c10'; x.strokeText(String(v), 128, 34); x.fillStyle = '#fff'; x.fillText(String(v), 128, 34);
+    if (heal) { x.fillStyle = '#5dff7a'; x.font = '900 34px Rubik, Arial'; x.fillText('+', 228, 33); }
+    bar.userData.t.needsUpdate = true;
+  }
+
   // ---- actors ----
   const actors = [];
   function styleBody(c, size, head) { c.holder.scale.setScalar(size); const h = c.root.getObjectByName('Head'); if (h) h.scale.setScalar(head); for (const k in c.speed) c.speed[k] *= size; }
   function makeActor(heroKey, side, slot) {
     const H = HEROES[heroKey], color = teams[side].color, c = makeChar(A2['chars/' + heroKey + '_' + color], heroKey + '_' + color); styleBody(c, .82, 1.3);
     const ring = new THREE.Mesh(new THREE.RingGeometry(.52, .66, 28), new THREE.MeshBasicMaterial({ color: TEAM_HEX[color], transparent: true, opacity: .95, depthWrite: false })); ring.rotation.x = -Math.PI / 2; ring.position.y = .03; ring.renderOrder = 2; c.holder.add(ring);
-    const bar = makeBar(1.15, TEAM_HEX[color]), ammo = makeBar(1.15, 0xffb52e), sup = new THREE.Mesh(new THREE.RingGeometry(.74, .9, 32), new THREE.MeshBasicMaterial({ color: 0xffd21f, transparent: true, opacity: .95, depthWrite: false })); sup.rotation.x = -Math.PI / 2; sup.position.y = .035; sup.visible = false; c.holder.add(sup);
+    const bar = makeHpBar(), ammo = makeBar(1.15, 0xffb52e), sup = new THREE.Mesh(new THREE.RingGeometry(.74, .9, 32), new THREE.MeshBasicMaterial({ color: 0xffd21f, transparent: true, opacity: .95, depthWrite: false })); sup.rotation.x = -Math.PI / 2; sup.position.y = .035; sup.visible = false; c.holder.add(sup);
     scene.add(bar, ammo); scene.add(c.holder); attach(c, WEAPONS[H.weapon].model); if (H.sup === 'jet') attach(c, 'jetpack');
     const a = { c, H, heroKey, side, slot, name: H.name, W: WEAPONS[H.weapon], hp: H.hp, maxHp: H.hp, alive: true, state: 'free', ammo: RULES.ammo, sup: 0, atkCd: 0, shot: null, shot2: 0, lastHit: -9, respawnT: 0, prot: 0, upT: 0, carry: null, kills: 0, dmg: 0, deaths: 0,
       inp: { mx: 0, mz: 0 }, aimYaw: 0, aiming: false, mvx: 0, mvz: 0, ring, bar, ammoBar: ammo, supRing: sup, isPlayer: false };
@@ -683,8 +695,8 @@ async function boot() {
     const c = a.c, p = c.holder.position, W = a.W; if (c.flashT > 0 && (c.flashT -= dt) <= 0) for (const m of c.mats) m.emissiveIntensity = 0;
     if (!a.alive) { if (!matchOver && (a.respawnT -= dt) <= 0) respawn(a); return; }
     a.atkCd -= dt; a.prot -= dt; if (a.ammo < RULES.ammo) a.ammo = Math.min(RULES.ammo, a.ammo + dt / W.reload);
-    const sp0 = layout.spawns[a.side][1], atBase = dist2(a.x, a.z, sp0[0], sp0[1]) < RULES.baseR + 2.5; if (a.hp < a.maxHp && (atBase || NOW - a.lastHit > RULES.regenDelay)) a.hp = Math.min(a.maxHp, a.hp + (atBase ? RULES.baseHeal : RULES.regen) * dt);
-    setBar(a.bar, a.hp / a.maxHp); a.bar.position.set(p.x, 2.05 + p.y, p.z); a.ammoBar.visible = a.isPlayer && !DBG.spectate; if (a.ammoBar.visible) { setBar(a.ammoBar, Math.floor(a.ammo + .001) / RULES.ammo + (a.ammo % 1) / RULES.ammo * .0); a.ammoBar.userData.fg.scale.x = Math.max(.001, a.ammoBar.userData.w * a.ammo / RULES.ammo); a.ammoBar.position.set(p.x, 1.86 + p.y, p.z); }
+    const sp0 = layout.spawns[a.side][1], atBase = dist2(a.x, a.z, sp0[0], sp0[1]) < RULES.baseR + 2.5; const h0 = a.hp; if (a.hp < a.maxHp && (atBase || NOW - a.lastHit > RULES.regenDelay)) a.hp = Math.min(a.maxHp, a.hp + (atBase ? RULES.baseHeal : RULES.regen) * dt); a.healGain = (a.healGain || 0) + (a.hp - h0); if (a.hp > h0) a.healT = NOW + .3; a.healing = (a.healT || 0) > NOW; if (a.healGain >= 30 && a.isPlayer) { popNum(a.x, a.z, '+' + Math.round(a.healGain), '#5dff7a'); a.healGain = 0; } if (a.hp >= a.maxHp) a.healGain = 0;
+    a.bar.position.set(p.x, 2.15 + p.y, p.z); drawHpBar(a.bar, a.hp, a.maxHp, a.isPlayer ? 'me' : (a.side === player.side ? 'A' : 'B'), a.healing, a.isPlayer); a.ammoBar.visible = a.isPlayer && !DBG.spectate; if (a.ammoBar.visible) { setBar(a.ammoBar, Math.floor(a.ammo + .001) / RULES.ammo + (a.ammo % 1) / RULES.ammo * .0); a.ammoBar.userData.fg.scale.x = Math.max(.001, a.ammoBar.userData.w * a.ammo / RULES.ammo); a.ammoBar.position.set(p.x, 1.86 + p.y, p.z); }
     a.supRing.visible = a.sup >= 1; if (a.supRing.visible) a.supRing.material.opacity = .6 + .35 * Math.sin(NOW * 8);
     const ox = p.x, oz = p.z, inp = a.inp, mag = Math.min(1, Math.hypot(inp.mx, inp.mz)), moving = mag > .12, mdx = moving ? inp.mx / Math.hypot(inp.mx, inp.mz) : 0, mdz = moving ? inp.mz / Math.hypot(inp.mx, inp.mz) : 0;
     if (a.state === 'free') {
@@ -841,7 +853,7 @@ async function boot() {
 
   // ---------- camera ----------
   const camT = new THREE.Vector3(), CAM = { y: 11.2, z: 8.2 }, spec = { x: 0, z: 0, follow: null, zoom: 1.7 }, sd = { id: null, x: 0, y: 0 }; let zoom = 1;
-  function resize() { const w = window.innerWidth, h = window.innerHeight; renderer.setSize(w, h, false); camera.aspect = w / h; camera.fov = w < h ? 54 : 40; zoom = w < h ? 1.5 : 1.32; camera.updateProjectionMatrix(); restSticks(); }
+  function resize() { const w = window.innerWidth, h = window.innerHeight; renderer.setSize(w, h, false); camera.aspect = w / h; camera.fov = w < h ? 54 : 40; zoom = w < h ? 1.3 : 1.15; camera.updateProjectionMatrix(); restSticks(); }
   window.addEventListener('resize', resize); window.addEventListener('orientationchange', () => setTimeout(resize, 200));
   function specCycle(d) { let i = spec.follow ? actors.indexOf(spec.follow) : -1; spec.follow = actors[(i + d + actors.length) % actors.length]; }
   touchEl.addEventListener('wheel', e => { if (DBG.spectate) { spec.zoom = clamp(spec.zoom * (e.deltaY > 0 ? 1.1 : .9), .7, 3); e.preventDefault(); } }, { passive: false });
