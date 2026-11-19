@@ -1,0 +1,1 @@
+# Arena Kids\n\n3v3 arena game (Three.js). Play: open the GitHub Pages link on a phone, then Share → Add to Home Screen for full screen.\n
